@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.version       = Vanitygen::VERSION
   spec.authors       = ['Benjamin Feng']
   spec.email         = ['contact@fengb.info']
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ''
+  spec.summary       = %q{Thin ruby wrapper around vanitygen executable}
+  spec.description   = %q{Thin ruby wrapper around vanitygen executable. Sibling project of <https://github.com/bitvain/vanitygen-ruby>.}
+  spec.homepage      = 'https://github.com/bitvain/vanitygen-wrapper'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0")

@@ -1,8 +1,12 @@
 # vanitygen-wrapper
 
-TODO: Write a gem description
+Thin ruby wrapper around vanitygen executable. Sibling project of <https://github.com/bitvain/vanitygen-ruby>.
 
 ## Installation
+
+Download and install <https://github.com/samr7/vanitygen>
+
+Make sure `vanitygen` is available in your `$PATH`.
 
 Add this line to your application's Gemfile:
 
@@ -20,7 +24,40 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Verify pattern validity:
+
+```ruby
+>> Vanitygen.valid?('1AB')
+=> true
+>> Vanitygen.valid?('2AB')
+=> false
+```
+
+Check pattern difficulty:
+
+```ruby
+>> Vanitygen.difficulty('1AB')
+=> 1330
+>> Vanitygen.difficulty('1AB', case_insensitive: true)
+=> 654
+```
+
+Generate single addresses:
+
+```ruby
+>> Vanitygen.generate('1AB')
+=> {:pattern=>"1AB", :address=>"1ABz3svEbWHyj5penc6LLX6xvDfzZcsZu9", :private_key=>"5KRtsDfuiMf549QU1X6mNcTuYxd2V4XsjQBD8pgUMEPFGFADMzb"}
+```
+
+Continuously generate addresses:
+
+```ruby
+>> Vanitygen.continuous('1AB') { |data| puts data }
+{:pattern=>"1AB", :address=>"1ABsD3pMDJbmpQx941faFn5Tg7aeVccW9c", :private_key=>"5KAjmVJAoBgNNNtVqCWYofNH6N8erSBGd7omsLCzSWg9DHZJd15"}
+{:pattern=>"1AB", :address=>"1ABzPupWHxiWRBhAPYmcxbBQoonE1CgF7u", :private_key=>"5KRB9rV78DdTp6RWD7K1mA7iNgRGTXDuA7aGvC4xJLPg4YLx5j2"}
+{:pattern=>"1AB", :address=>"1ABc8fVqFW2SXBfmQh5B6u1cg9SEPF2xMP", :private_key=>"5JAVeQBXT2ZL5p6oLgK4QAiDVdC8J9ytLHT999TxzSwvHnkgu3T"}
+[...]
+```
 
 ## Contributing
 
