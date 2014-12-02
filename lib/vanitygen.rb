@@ -21,10 +21,6 @@ module Vanitygen
       @network = network
     end
 
-    def type_flag
-      NETWORKS[network]
-    end
-
     def valid?(pattern)
       flags = [type_flag, '-n', pattern].compact
       pid = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
@@ -52,6 +48,11 @@ module Vanitygen
 
     def continuous(patterns, case_insensitive: false, &block)
       raise LocalJumpError if block.nil?
+      if patterns.any? { |p| p.is_a?(Regexp) }
+        unless patterns.all? { |p| p.is_a?(Regexp) }
+          raise TypeError
+        end
+      end
 
       patterns_file = Tempfile.new('vanitygen-patterns')
       patterns.each do |pattern|
@@ -63,9 +64,9 @@ module Vanitygen
       File.mkfifo(tmp_pipe)
 
       flags = [type_flag, '-k']
+      flags << '-i' if case_insensitive
       flags << '-f' << patterns_file.path
       flags << '-o' << tmp_pipe
-      flags << '-i' if case_insensitive
       flags.compact!
 
       thread = Thread.new do
@@ -99,6 +100,12 @@ module Vanitygen
         patterns_file.close
         patterns_file.unlink
       end
+    end
+
+    private
+
+    def type_flag
+      NETWORKS[network]
     end
 
     def parse(msg)
