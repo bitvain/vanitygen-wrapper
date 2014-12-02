@@ -1,4 +1,4 @@
-Copyright (c) 2014 fengb
+Copyright (c) 2014 Benjamin Feng
 
 MIT License
 

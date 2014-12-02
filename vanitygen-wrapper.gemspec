@@ -6,7 +6,7 @@ require 'vanitygen/version'
 Gem::Specification.new do |spec|
   spec.name          = 'vanitygen-wrapper'
   spec.version       = Vanitygen::VERSION
-  spec.authors       = ['fengb']
+  spec.authors       = ['Benjamin Feng']
   spec.email         = ['contact@fengb.info']
   spec.summary       = %q{TODO: Write a short summary. Required.}
   spec.description   = %q{TODO: Write a longer description. Optional.}
