@@ -21,15 +21,19 @@ module Vanitygen
       @network = network
     end
 
-    def valid?(pattern)
-      flags = [type_flag, '-n', pattern].compact
+    def valid?(pattern, options={})
+      flags = flags_from({simulate: true,
+                          patterns: [pattern]
+                         }.merge(options))
       pid = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
       pid, status = Process.wait2(pid)
       status == 0
     end
 
-    def difficulty(pattern)
-      flags = [type_flag, '-n', pattern].compact
+    def difficulty(pattern, options={})
+      flags = flags_from({simulate: true,
+                          patterns: [pattern]
+                         }.merge(options))
       msg = ''
       Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
         stdin.close
@@ -43,8 +47,9 @@ module Vanitygen
       msg.split.last.to_i
     end
 
-    def generate(pattern)
-      flags = [type_flag, pattern].compact!
+    def generate(pattern, options={})
+      flags = flags_from({patterns: [pattern]
+                         }.merge(options))
 
       msg = ''
       Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
@@ -62,7 +67,7 @@ module Vanitygen
       parse(msg)[0]
     end
 
-    def continuous(patterns, case_insensitive: false, &block)
+    def continuous(patterns, options={}, &block)
       raise LocalJumpError if block.nil?
       if patterns.any? { |p| p.is_a?(Regexp) }
         unless patterns.all? { |p| p.is_a?(Regexp) }
@@ -79,12 +84,6 @@ module Vanitygen
       tmp_pipe = "/tmp/vanitygen-pipe-#{rand(1000000)}"
       File.mkfifo(tmp_pipe)
 
-      flags = [type_flag, '-k']
-      flags << '-i' if case_insensitive
-      flags << '-f' << patterns_file.path
-      flags << '-o' << tmp_pipe
-      flags.compact!
-
       thread = Thread.new do
         # FIXME: ignore EOF instead of reopening
         loop do
@@ -97,6 +96,11 @@ module Vanitygen
           end
         end
       end
+
+      flags = flags_from({continuous: true,
+                          patterns_file: patterns_file.path,
+                          output_file: tmp_pipe
+                         }.merge(options))
 
       pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
       Process.wait(pid_vanitygen)
@@ -120,8 +124,16 @@ module Vanitygen
 
     private
 
-    def type_flag
-      NETWORKS[network]
+    def flags_from(options)
+      [].tap do |flags|
+        flags << NETWORKS[network]               if NETWORKS[network]
+        flags << '-n'                            if options[:simulate]
+        flags << '-k'                            if options[:continuous]
+        flags << '-i'                            if options[:case_insensitive]
+        flags << '-f' << options[:patterns_file] if options[:patterns_file]
+        flags << '-o' << options[:output_file]   if options[:output_file]
+        flags.concat options[:patterns]          if options[:patterns]
+      end
     end
 
     def parse(msg)
