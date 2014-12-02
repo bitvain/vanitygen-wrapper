@@ -1,3 +1,5 @@
+require 'mkfifo'
+require 'open3'
 require 'tempfile'
 
 module Vanitygen
@@ -30,8 +32,26 @@ module Vanitygen
       status == 0
     end
 
+    def generate(pattern)
+      flags = [type_flag, pattern].compact!
+
+      msg = ''
+      Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
+        stdin.close
+        while !stdout.eof?
+          msg << stdout.read
+        end
+        error = stderr.read
+        stdout.close
+        stderr.close
+        raise "vanitygen status (#{wait_thr.value}) err: #{error}" if wait_thr.value != 0
+      end
+
+      parse(msg)[0]
+    end
+
     def continuous(patterns, case_insensitive: false, &block)
-      raise if block.nil?
+      raise LocalJumpError if block.nil?
 
       patterns_file = Tempfile.new('vanitygen-patterns')
       patterns.each do |pattern|
@@ -64,7 +84,7 @@ module Vanitygen
       pid_vanitygen = Process.spawn('vanitygen', *flags)
       Process.wait(pid_vanitygen)
     ensure
-      thread.kill
+      thread && thread.kill
       if pid_vanitygen
         begin
           Process.kill('TERM', pid_vanitygen)
@@ -74,13 +94,15 @@ module Vanitygen
         end
       end
 
-      File.delete tmp_pipe
-      patterns_file.close
-      patterns_file.unlink
+      tmp_pipe && File.exist?(tmp_pipe) && File.delete(tmp_pipe)
+      if patterns_file
+        patterns_file.close
+        patterns_file.unlink
+      end
     end
 
     def parse(msg)
-      lines = msg.split("\n")
+      lines = msg.split("\n").grep(/(Pattern|Address|Privkey)/)
       lines.each_slice(3).map do |snippet|
         {
           pattern: snippet[0].split.last,
