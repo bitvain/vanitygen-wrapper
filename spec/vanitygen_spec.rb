@@ -1,6 +1,7 @@
 require 'vanitygen'
 
 require 'bitcoin'
+require 'devnull'
 require 'timeout'
 
 describe Vanitygen do

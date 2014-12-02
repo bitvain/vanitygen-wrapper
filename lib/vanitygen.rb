@@ -98,7 +98,7 @@ module Vanitygen
         end
       end
 
-      pid_vanitygen = Process.spawn('vanitygen', *flags)
+      pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
       Process.wait(pid_vanitygen)
     ensure
       thread && thread.kill
