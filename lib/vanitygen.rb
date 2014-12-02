@@ -69,11 +69,6 @@ module Vanitygen
 
     def continuous(patterns, options={}, &block)
       raise LocalJumpError if block.nil?
-      if patterns.any? { |p| p.is_a?(Regexp) }
-        unless patterns.all? { |p| p.is_a?(Regexp) }
-          raise TypeError
-        end
-      end
 
       patterns_file = Tempfile.new('vanitygen-patterns')
       patterns.each do |pattern|
@@ -83,6 +78,12 @@ module Vanitygen
 
       tmp_pipe = "/tmp/vanitygen-pipe-#{rand(1000000)}"
       File.mkfifo(tmp_pipe)
+
+      flags = flags_from({continuous: true,
+                          patterns_file: patterns_file.path,
+                          output_file: tmp_pipe,
+                          patterns: patterns,
+                         }.merge(options))
 
       thread = Thread.new do
         # FIXME: ignore EOF instead of reopening
@@ -96,11 +97,6 @@ module Vanitygen
           end
         end
       end
-
-      flags = flags_from({continuous: true,
-                          patterns_file: patterns_file.path,
-                          output_file: tmp_pipe
-                         }.merge(options))
 
       pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
       Process.wait(pid_vanitygen)
@@ -126,13 +122,27 @@ module Vanitygen
 
     def flags_from(options)
       [].tap do |flags|
+        patterns =
+          if options[:patterns].nil?
+            nil
+          elsif options[:patterns].any? { |p| p.is_a?(Regexp) }
+            if options[:patterns].all? { |p| p.is_a?(Regexp) }
+              flags << '-r'
+              options[:patterns].map(&:source)
+            else
+              raise TypeError
+            end
+          else
+            options[:patterns].map(&:to_s)
+          end
+
         flags << NETWORKS[network]               if NETWORKS[network]
         flags << '-n'                            if options[:simulate]
         flags << '-k'                            if options[:continuous]
         flags << '-i'                            if options[:case_insensitive]
         flags << '-f' << options[:patterns_file] if options[:patterns_file]
         flags << '-o' << options[:output_file]   if options[:output_file]
-        flags.concat options[:patterns]          if options[:patterns]
+        flags.concat(patterns)                   if patterns && !options[:patterns_file]
       end
     end
 
