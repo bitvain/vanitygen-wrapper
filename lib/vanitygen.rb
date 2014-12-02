@@ -28,6 +28,21 @@ module Vanitygen
       status == 0
     end
 
+    def difficulty(pattern)
+      flags = [type_flag, '-n', pattern].compact
+      msg = ''
+      Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
+        stdin.close
+        stdout.close
+        while !stderr.eof?
+          msg << stderr.read
+        end
+        stderr.close
+        raise "vanitygen status (#{wait_thr.value}) err: #{msg}" if wait_thr.value != 0
+      end
+      msg.split.last.to_i
+    end
+
     def generate(pattern)
       flags = [type_flag, pattern].compact!
 
@@ -37,8 +52,9 @@ module Vanitygen
         while !stdout.eof?
           msg << stdout.read
         end
-        error = stderr.read
         stdout.close
+
+        error = stderr.read
         stderr.close
         raise "vanitygen status (#{wait_thr.value}) err: #{error}" if wait_thr.value != 0
       end
