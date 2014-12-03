@@ -2,6 +2,16 @@
 
 Thin ruby wrapper around vanitygen executable. Sibling project of <https://github.com/bitvain/vanitygen-ruby>.
 
+## Warning
+
+Due to rampant use of pipes, signals, and subprocesses, this gem probably does
+not work in JRuby or Windows.
+
+This also cannot be effectively tested in CI due to depending on an external
+executable.
+
+Discretion is advised.
+
 ## Installation
 
 Download and install <https://github.com/samr7/vanitygen>
@@ -11,7 +21,7 @@ Make sure `vanitygen` is available in your `$PATH`.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'vanitygen-wrapper', require 'vanitygen'
+gem 'vanitygen-wrapper', require: 'vanitygen'
 ```
 
 And then execute:
