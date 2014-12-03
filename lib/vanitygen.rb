@@ -85,23 +85,16 @@ module Vanitygen
                           patterns: patterns,
                          }.merge(options))
 
-      thread = Thread.new do
-        # FIXME: ignore EOF instead of reopening
-        loop do
-          File.open(tmp_pipe, 'r') do |file|
-            while !file.eof? and (msg = file.read)
-              parse(msg).each do |data|
-                block.call(data)
-              end
-            end
+      # Unfortunately, vanitygen spams stdout with progress
+      pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
+      while child_alive?(pid_vanitygen)
+        File.open(tmp_pipe, 'r') do |file|
+          while !file.eof? and (msg = file.read)
+            parse(msg).each(&block)
           end
         end
       end
-
-      pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
-      Process.wait(pid_vanitygen)
     ensure
-      thread && thread.kill
       if pid_vanitygen
         begin
           Process.kill('TERM', pid_vanitygen)
@@ -119,6 +112,15 @@ module Vanitygen
     end
 
     private
+
+    def child_alive?(pid)
+      # Very unix like
+      # Unfortunately, not very ruby like :(
+      Process.kill(0, pid)
+      true
+    rescue Errno::ESRCH
+      false
+    end
 
     def flags_from(options)
       [].tap do |flags|
