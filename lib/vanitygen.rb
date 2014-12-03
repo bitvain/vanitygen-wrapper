@@ -9,6 +9,8 @@ module Vanitygen
     NETWORKS = {
       bitcoin:  nil,
       testnet3: '-T',
+      namecoin: '-N',
+      litecoin: '-L',
     }
 
     def network
