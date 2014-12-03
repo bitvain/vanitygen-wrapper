@@ -1,7 +1,8 @@
+require 'spec_helper'
+
 require 'vanitygen'
 
 require 'bitcoin'
-require 'devnull'
 require 'timeout'
 
 describe Vanitygen do
@@ -145,6 +146,29 @@ describe Vanitygen do
       expect(Vanitygen.valid?('1O')).to be(false)
       expect(Vanitygen.valid?('1I')).to be(false)
       expect(Vanitygen.valid?('1l')).to be(false)
+    end
+  end
+
+  describe '.network' do
+    it 'switches to :testnet3' do
+      assert{ not Vanitygen.valid?('mm') }
+      Vanitygen.network = :testnet3
+      assert{ Vanitygen.valid?('mm') }
+    end
+
+    it 'switches to "testnet3"' do
+      Vanitygen.network = 'testnet3'
+      assert{ Vanitygen.valid?('mm') }
+    end
+
+    it 'stays on :bitcoin' do
+      Vanitygen.network = :bitcoin
+      assert{ Vanitygen.valid?('1a') }
+    end
+
+    it 'dies for missing network' do
+      error = rescuing{ Vanitygen.network = :foobar }
+      assert{ error.message =~ /not supported/ }
     end
   end
 end
