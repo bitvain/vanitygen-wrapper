@@ -13,6 +13,11 @@ module Vanitygen
       litecoin: '-L',
     }
 
+    attr_accessor :executable
+    def executable
+      @executable ||= 'vanitygen'
+    end
+
     def network
       @network ||= :bitcoin
     end
@@ -27,7 +32,7 @@ module Vanitygen
       flags = flags_from({simulate: true,
                           patterns: [pattern]
                          }.merge(options))
-      pid = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
+      pid = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
       pid, status = Process.wait2(pid)
       status == 0
     end
@@ -37,7 +42,7 @@ module Vanitygen
                           patterns: [pattern]
                          }.merge(options))
       msg = ''
-      Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
+      Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
         stdin.close
         stdout.close
         while !stderr.eof?
@@ -54,7 +59,7 @@ module Vanitygen
                          }.merge(options))
 
       msg = ''
-      Open3.popen3('vanitygen', *flags) do |stdin, stdout, stderr, wait_thr|
+      Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
         stdin.close
         while !stdout.eof?
           msg << stdout.read
@@ -88,7 +93,7 @@ module Vanitygen
                          }.merge(options))
 
       # Unfortunately, vanitygen spams stdout with progress
-      pid_vanitygen = Process.spawn('vanitygen', *flags, out: '/dev/null', err: '/dev/null')
+      pid_vanitygen = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
       while child_alive?(pid_vanitygen)
         File.open(tmp_pipe, 'r') do |file|
           while !file.eof? and (msg = file.read)
