@@ -100,13 +100,13 @@ module Vanitygen
     def continuous(patterns, options={}, &block)
       raise LocalJumpError if block.nil?
 
-      patterns_file = Tempfile.new('vanitygen-patterns')
+      patterns_file = Tempfile.new('vanitygen-patterns-', work_dir)
       patterns.each do |pattern|
         patterns_file.puts pattern
       end
       patterns_file.flush
 
-      tmp_pipe = "/tmp/vanitygen-pipe-#{rand(1000000)}"
+      tmp_pipe = File.join(work_dir || Dir.tmpdir, Time.now.strftime("vanitygen-pipe-%Y%m%d-#{rand(1000000)}"))
       File.mkfifo(tmp_pipe)
 
       flags = flags_from(options, continuous: true,
