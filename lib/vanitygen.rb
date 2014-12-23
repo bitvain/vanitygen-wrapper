@@ -1,4 +1,5 @@
 require 'mkfifo'
+require 'fileutils'
 require 'open3'
 require 'tempfile'
 
@@ -12,6 +13,25 @@ module Vanitygen
       namecoin: '-N',
       litecoin: '-L',
     }
+
+    def work_dir
+      return @work_dir unless block_given?
+
+      if @work_dir
+        Dir.chdir @work_dir do
+          yield
+        end
+      else
+        yield
+      end
+    end
+
+    def work_dir=(dir)
+      @work_dir = dir
+      if dir
+        FileUtils.mkdir_p dir
+      end
+    end
 
     attr_accessor :executable
     def executable
@@ -31,23 +51,27 @@ module Vanitygen
     def valid?(pattern, options={})
       flags = flags_from(options, simulate: true, patterns: [pattern])
 
-      pid = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
-      pid, status = Process.wait2(pid)
-      status == 0
+      work_dir do
+        pid = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
+        pid, status = Process.wait2(pid)
+        status == 0
+      end
     end
 
     def difficulty(pattern, options={})
       flags = flags_from(options, simulate: true, patterns: [pattern])
 
       msg = ''
-      Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
-        stdin.close
-        stdout.close
-        while !stderr.eof?
-          msg << stderr.read
+      work_dir do
+        Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
+          stdin.close
+          stdout.close
+          while !stderr.eof?
+            msg << stderr.read
+          end
+          stderr.close
+          raise "vanitygen status (#{wait_thr.value}) err: #{msg}" if wait_thr.value != 0
         end
-        stderr.close
-        raise "vanitygen status (#{wait_thr.value}) err: #{msg}" if wait_thr.value != 0
       end
       msg.split.last.to_i
     end
@@ -56,16 +80,18 @@ module Vanitygen
       flags = flags_from(options, patterns: [pattern])
 
       msg = ''
-      Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
-        stdin.close
-        while !stdout.eof?
-          msg << stdout.read
-        end
-        stdout.close
+      work_dir do
+        Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
+          stdin.close
+          while !stdout.eof?
+            msg << stdout.read
+          end
+          stdout.close
 
-        error = stderr.read
-        stderr.close
-        raise "vanitygen status (#{wait_thr.value}) err: #{error}" if wait_thr.value != 0
+          error = stderr.read
+          stderr.close
+          raise "vanitygen status (#{wait_thr.value}) err: #{error}" if wait_thr.value != 0
+        end
       end
 
       parse(msg)[0]
@@ -88,12 +114,16 @@ module Vanitygen
                                   output_file: tmp_pipe,
                                   patterns: patterns)
 
-      # Unfortunately, vanitygen spams stdout with progress
-      pid_vanitygen = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
-      while child_alive?(pid_vanitygen)
-        File.open(tmp_pipe, 'r') do |file|
-          while !file.eof? and (msg = file.read)
-            parse(msg).each(&block)
+      pid_vanitygen = nil
+      work_dir do
+        # Unfortunately, vanitygen spams stdout with progress
+        pid_vanitygen = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
+
+        while child_alive?(pid_vanitygen)
+          File.open(tmp_pipe, 'r') do |file|
+            while !file.eof? and (msg = file.read)
+              parse(msg).each(&block)
+            end
           end
         end
       end
