@@ -29,18 +29,16 @@ module Vanitygen
     end
 
     def valid?(pattern, options={})
-      flags = flags_from({simulate: true,
-                          patterns: [pattern]
-                         }.merge(options))
+      flags = flags_from(options, simulate: true, patterns: [pattern])
+
       pid = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
       pid, status = Process.wait2(pid)
       status == 0
     end
 
     def difficulty(pattern, options={})
-      flags = flags_from({simulate: true,
-                          patterns: [pattern]
-                         }.merge(options))
+      flags = flags_from(options, simulate: true, patterns: [pattern])
+
       msg = ''
       Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
         stdin.close
@@ -55,8 +53,7 @@ module Vanitygen
     end
 
     def generate(pattern, options={})
-      flags = flags_from({patterns: [pattern]
-                         }.merge(options))
+      flags = flags_from(options, patterns: [pattern])
 
       msg = ''
       Open3.popen3(executable, *flags) do |stdin, stdout, stderr, wait_thr|
@@ -86,11 +83,10 @@ module Vanitygen
       tmp_pipe = "/tmp/vanitygen-pipe-#{rand(1000000)}"
       File.mkfifo(tmp_pipe)
 
-      flags = flags_from({continuous: true,
-                          patterns_file: patterns_file.path,
-                          output_file: tmp_pipe,
-                          patterns: patterns,
-                         }.merge(options))
+      flags = flags_from(options, continuous: true,
+                                  patterns_file: patterns_file.path,
+                                  output_file: tmp_pipe,
+                                  patterns: patterns)
 
       # Unfortunately, vanitygen spams stdout with progress
       pid_vanitygen = Process.spawn(executable, *flags, out: '/dev/null', err: '/dev/null')
@@ -129,7 +125,9 @@ module Vanitygen
       false
     end
 
-    def flags_from(options)
+    def flags_from(options, default)
+      options = default.merge(options)
+
       [].tap do |flags|
         patterns =
           if options[:patterns].nil?
